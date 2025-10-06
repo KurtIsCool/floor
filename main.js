@@ -19,9 +19,11 @@ let activeNav = 'home';
 let particleSystem;
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeApp();
+    });
+}
 
 function initializeApp() {
     // Initialize typewriter effect
@@ -132,7 +134,7 @@ function populateRideFeed() {
     
     rideList.innerHTML = '';
     
-    const filteredRides = getFilteredRides();
+    const filteredRides = getFilteredRides(rides, currentFilter);
     
     filteredRides.forEach((ride, index) => {
         const rideCard = createRideCard(ride);
@@ -150,10 +152,10 @@ function populateRideFeed() {
     });
 }
 
-function getFilteredRides() {
-    switch (currentFilter) {
+function getFilteredRides(rides, filter) {
+    switch (filter) {
         case 'nearby':
-            return rides.filter(ride => ride.distance <= '3.0 km');
+            return rides.filter(ride => parseFloat(ride.distance) <= 3.0);
         case 'recent':
             return rides.slice(0, 4);
         default:
@@ -445,29 +447,40 @@ function calculateETA(distance, averageSpeed = 25) {
 }
 
 // Export functions for global access
-window.filterRides = filterRides;
-window.selectRide = selectRide;
-window.offerRide = offerRide;
-window.setActiveNav = setActiveNav;
-window.showPostRide = showPostRide;
-window.scrollToFeed = scrollToFeed;
-window.showCommunity = showCommunity;
+if (typeof window !== 'undefined') {
+    window.filterRides = filterRides;
+    window.selectRide = selectRide;
+    window.offerRide = offerRide;
+    window.setActiveNav = setActiveNav;
+    window.showPostRide = showPostRide;
+    window.scrollToFeed = scrollToFeed;
+    window.showCommunity = showCommunity;
+}
 
 // Load rides from backend into the homepage feed
-document.addEventListener("DOMContentLoaded", () => {
-    const rideList = document.getElementById("ride-list");
-    if (rideList) {
-        loadRides();
+if (typeof document !== 'undefined') {
+    document.addEventListener("DOMContentLoaded", () => {
+        const rideList = document.getElementById("ride-list");
+        if (rideList) {
+            loadRides();
+        }
+    });
+}
+
+async function fetchRidesData() {
+    const res = await fetch(API_URL);
+    if (!res.ok) {
+        throw new Error('Failed to fetch rides');
     }
-});
+    return await res.json();
+}
 
 async function loadRides() {
     const rideList = document.getElementById("ride-list");
     rideList.innerHTML = "<p class='text-gray-500'>Loading rides...</p>";
 
     try {
-        const res = await fetch(API_URL);
-        const ridesData = await res.json();
+        const ridesData = await fetchRidesData();
 
         if (ridesData.length === 0) {
             rideList.innerHTML = "<p class='text-gray-500'>No rides posted yet. Be the first!</p>";
@@ -509,3 +522,13 @@ async function loadRides() {
     }
 }
 
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        formatTime,
+        formatDistance,
+        calculateETA,
+        getFilteredRides,
+        createRideCard,
+        fetchRidesData,
+    };
+}

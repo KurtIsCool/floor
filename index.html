@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RideCo - Community Motorcycle Rides in Iloilo City</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script>
+    <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/splitting@1.0.6/dist/splitting.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .hero-bg { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
+        .accent-green { color: #00A86B; }
+        .bg-accent-green { background-color: #00A86B; }
+        .border-accent-green { border-color: #00A86B; }
+        .text-shadow { text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        .floating-btn { animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        .pulse-green { animation: pulse-green 2s infinite; }
+        @keyframes pulse-green { 0%, 100% { box-shadow: 0 0 0 0 rgba(0, 168, 107, 0.7); } 50% { box-shadow: 0 0 0 10px rgba(0, 168, 107, 0); } }
+        #particles-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        .content-overlay { position: relative; z-index: 1; }
+        .ride-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .map-container { background: #f1f5f9; border-radius: 12px; overflow: hidden; }
+        .status-online { background: #10B981; }
+        .status-offline { background: #6B7280; }
+        .bottom-nav { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="bg-white text-gray-900 overflow-x-hidden">
+    <!-- Hero Section -->
+    <section class="hero-bg min-h-screen relative flex items-center justify-center">
+        <canvas id="particles-canvas"></canvas>
+        <div class="content-overlay container mx-auto px-4 py-8">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <!-- Left Content -->
+                <div class="text-center lg:text-left">
+                    <h1 class="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 text-shadow">
+                        <span id="typed-text"></span>
+                    </h1>
+                    <p class="text-lg lg:text-xl text-gray-600 mb-8 leading-relaxed">
+                        Connect with trusted motorcycle riders in Iloilo City. 
+                        Safe, affordable, and community-driven rides for everyone.
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                        <button onclick="showPostRide()" class="bg-accent-green text-white px-8 py-4 rounded-full font-semibold text-lg floating-btn pulse-green hover:bg-green-600 transition-all duration-300">
+                            Post a Ride
+                        </button>
+                        <button onclick="scrollToFeed()" class="border-2 border-accent-green text-accent-green px-8 py-4 rounded-full font-semibold text-lg hover:bg-accent-green hover:text-white transition-all duration-300">
+                            Browse Rides
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Right Content - Hero Image -->
+                <div class="relative">
+                    <div class="aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl">
+                        <img src="resources/hero-rider.jpg" alt="Motorcycle rider in Iloilo City" 
+                             class="w-full h-full object-cover">
+                    </div>
+                    <div class="absolute -bottom-4 -right-4 bg-white p-4 rounded-xl shadow-lg">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full status-online"></div>
+                            <span class="text-sm font-medium">Live Tracking</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Ride Feed Section -->
+        <section id="ride-feed" class="mb-16">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4" data-splitting>
+                    Live Ride Requests
+                </h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+                    See who's looking for rides right now. Join our community of trusted riders and passengers.
+                </p>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="flex justify-center mb-8">
+                <div class="bg-gray-100 rounded-full p-1 flex">
+                    <button onclick="filterRides('all')" class="filter-btn active px-6 py-2 rounded-full font-medium transition-all duration-300">
+                        All Rides
+                    </button>
+                    <button onclick="filterRides('nearby')" class="filter-btn px-6 py-2 rounded-full font-medium transition-all duration-300">
+                        Nearby
+                    </button>
+                    <button onclick="filterRides('recent')" class="filter-btn px-6 py-2 rounded-full font-medium transition-all duration-300">
+                        Recent
+                    </button>
+                </div>
+            </div>
+
+            <!-- Feed and Map Container -->
+            <div class="grid lg:grid-cols-3 gap-8">
+                <!-- Ride Feed -->
+                <div class="lg:col-span-2 space-y-4" id="ride-list">
+                    <!-- Sample ride posts will be populated by JavaScript -->
+                </div>
+
+                <!-- Map -->
+                <div class="map-container h-96 lg:h-[600px] sticky top-4">
+                    <div id="map" class="w-full h-full relative">
+                        <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-accent-green rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-gray-600 font-medium">Interactive Map</p>
+                                <p class="text-sm text-gray-500">Pickup locations will appear here</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="mb-16">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4" data-splitting>
+                    Why Choose RideCo?
+                </h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+                    Built for the Iloilo community, with safety and trust at our core.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-8 rounded-2xl shadow-lg card-hover border border-gray-100">
+                    <div class="w-12 h-12 bg-accent-green rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Verified Riders</h3>
+                    <p class="text-gray-600">All riders undergo thorough verification with government ID, driver's license, and vehicle documentation.</p>
+                </div>
+
+                <div class="bg-white p-8 rounded-2xl shadow-lg card-hover border border-gray-100">
+                    <div class="w-12 h-12 bg-accent-green rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Real-time Tracking</h3>
+                    <p class="text-gray-600">Track your ride in real-time with GPS location sharing and estimated arrival times.</p>
+                </div>
+
+                <div class="bg-white p-8 rounded-2xl shadow-lg card-hover border border-gray-100">
+                    <div class="w-12 h-12 bg-accent-green rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Flexible Payments</h3>
+                    <p class="text-gray-600">Choose from cash, GCash, Maya, or bank transfer. No hidden fees, transparent pricing.</p>
+                </div>
+
+                <div class="bg-white p-8 rounded-2xl shadow-lg card-hover border border-gray-100">
+                    <div class="w-12 h-12 bg-accent-green rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Community Driven</h3>
+                    <p class="text-gray-600">Built by Ilonggos for Ilonggos. Support local riders and build community connections.</p>
+                </div>
+
+                <div class="bg-white p-8 rounded-2xl shadow-lg card-hover border border-gray-100">
+                    <div class="w-12 h-12 bg-accent-green rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">24/7 Support</h3>
+                    <p class="text-gray-600">Round-the-clock customer support and emergency assistance when you need it most.</p>
+                </div>
+
+                <div class="bg-white p-8 rounded-2xl shadow-lg card-hover border border-gray-100">
+                    <div class="w-12 h-12 bg-accent-green rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Quick Response</h3>
+                    <p class="text-gray-600">Get matched with nearby riders quickly. Average response time under 3 minutes.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Community Section -->
+        <section class="mb-16">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-6" data-splitting>
+                        Join Our Growing Community
+                    </h2>
+                    <p class="text-lg text-gray-600 mb-8">
+                        Thousands of Ilonggos trust RideCo for their daily commute. From students to professionals, 
+                        our community spans across all districts of Iloilo City.
+                    </p>
+                    <div class="grid grid-cols-2 gap-6 mb-8">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold accent-green">2,500+</div>
+                            <div class="text-gray-600">Active Riders</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold accent-green">15,000+</div>
+                            <div class="text-gray-600">Rides Completed</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold accent-green">4.8★</div>
+                            <div class="text-gray-600">Average Rating</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold accent-green">3min</div>
+                            <div class="text-gray-600">Avg Response</div>
+                        </div>
+                    </div>
+                    <button onclick="showCommunity()" class="bg-accent-green text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-green-600 transition-all duration-300">
+                        Explore Community
+                    </button>
+                </div>
+                <div class="relative">
+                    <img src="resources/community-riders.jpg" alt="RideCo Community" 
+                         class="w-full h-96 object-cover rounded-2xl shadow-xl">
+                    <div class="absolute -bottom-6 -left-6 bg-white p-6 rounded-xl shadow-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="flex -space-x-2">
+                                <div class="w-8 h-8 bg-blue-500 rounded-full border-2 border-white"></div>
+                                <div class="w-8 h-8 bg-green-500 rounded-full border-2 border-white"></div>
+                                <div class="w-8 h-8 bg-purple-500 rounded-full border-2 border-white"></div>
+                            </div>
+                            <div>
+                                <div class="text-sm font-semibold">Maria, John, Sarah</div>
+                                <div class="text-xs text-gray-500">Just completed rides</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Floating Post Button -->
+    <button onclick="showPostRide()" class="fixed bottom-24 right-6 w-16 h-16 bg-accent-green text-white rounded-full shadow-2xl floating-btn pulse-green flex items-center justify-center z-50">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+    </button>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bottom-nav border-t border-gray-200 z-40">
+        <div class="flex justify-around py-2">
+            <button onclick="setActiveNav('home')" class="nav-item active flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                <span class="text-xs font-medium">Home</span>
+            </button>
+            <button onclick="setActiveNav('post')" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span class="text-xs font-medium">Post</span>
+            </button>
+            <button onclick="setActiveNav('rides')" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7"></path>
+                </svg>
+                <span class="text-xs font-medium">Rides</span>
+            </button>
+            <button onclick="setActiveNav('profile')" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                <span class="text-xs font-medium">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <script src="main.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", loadRides);
+
+async function loadRides() {
+    const rideList = document.getElementById("ride-list");
+    rideList.innerHTML = "<p class='text-gray-500'>Loading rides...</p>";
+
+    try {
+        const res = await fetch("http://localhost:4000/api/rides");
+        const rides = await res.json();
+
+        if (rides.length === 0) {
+            rideList.innerHTML = "<p class='text-gray-500'>No rides posted yet. Be the first!</p>";
+            return;
+        }
+
+        rideList.innerHTML = "";
+        rides.forEach(ride => {
+            const card = document.createElement("div");
+            card.className = "ride-card p-4 rounded-xl shadow mb-4 border border-gray-200";
+
+            card.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-semibold text-gray-900">${ride.pickup} → ${ride.destination}</h3>
+                    <span class="text-sm text-gray-500">${ride.departureTime === "now" ? "Now" : "Scheduled"}</span>
+                </div>
+                <p class="text-gray-600 text-sm mb-2">${ride.notes || "No special notes"}</p>
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-accent-green">₱${ride.fare}</span>
+                    <span class="text-sm text-gray-500">${ride.distance || "N/A"}</span>
+                </div>
+            `;
+
+            rideList.appendChild(card);
+        });
+    } catch (err) {
+        console.error(err);
+        rideList.innerHTML = "<p class='text-red-500'>Error loading rides. Is the server running?</p>";
+    }
+}
+</script>
+</body>
+</html>
